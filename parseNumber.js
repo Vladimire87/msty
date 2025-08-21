@@ -23,4 +23,10 @@ function parseNumber(input) {
   return Number.parseFloat(cleaned);
 }
 
-module.exports = parseNumber;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = parseNumber;
+}
+if (typeof window !== 'undefined') {
+  window.parseNumber = parseNumber;
+}
+
