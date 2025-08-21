@@ -1,0 +1,12 @@
+{
+  "name": "msty",
+  "version": "1.0.0",
+  "description": "",
+  "main": "parseNumber.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
