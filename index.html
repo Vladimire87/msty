@@ -159,16 +159,11 @@
     </div>
   </main>
 
+  <script src="./parseNumber.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
 
     // ---------- Helpers ----------
-    function parseNum(v) {
-      if (typeof v !== "string") return NaN;
-      v = v.replace(/\s+/g, "").replace(",", ".");
-      if (v === "") return NaN;
-      return Number(v);
-    }
     const fmtMoney = (x) => isFinite(x) ? ("$" + x.toFixed(2)) : "—";
     const fmtTime = (tsSec) => {
       try { return new Date(tsSec * 1000).toLocaleString(); } catch { return "—"; }
@@ -194,11 +189,11 @@
     // ---------- Calculator ----------
     function calculate() {
       hideMsg();
-      const S = parseNum($("shares").value);
-      let   C = parseNum($("cost").value);
-      const Avg = parseNum($("avg").value);
-      const P = parseNum($("price").value);
-      const T = parseNum($("target").value);
+      const S = parseNumber($("shares").value);
+      let   C = parseNumber($("cost").value);
+      const Avg = parseNumber($("avg").value);
+      const P = parseNumber($("price").value);
+      const T = parseNumber($("target").value);
       const strict = $("strict").checked;
 
       if (!isFinite(S) || S <= 0) { showMsg("Please enter a valid number of shares S (> 0).", "error"); return; }
@@ -298,7 +293,7 @@
 
         // Auto-fill P if it's empty or invalid
         const pInput = $("price");
-        const cur = parseNum(pInput.value);
+        const cur = parseNumber(pInput.value);
         if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
 
       } catch (e) {
