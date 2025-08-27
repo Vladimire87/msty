@@ -285,13 +285,31 @@
       const header = lines[0].split(",");
       const row = lines[1].split(",");
       const idxClose = header.findIndex(h => /close/i.test(h));
+      const idxOpen  = header.findIndex(h => /open/i.test(h));
       const idxDate  = header.findIndex(h => /^date$/i.test(h) || /d2/i.test(h));
       const idxTime  = header.findIndex(h => /^time$/i.test(h) || /t2/i.test(h));
-      const price = parseFloat(row[idxClose]);
-      const day = row[idxDate] || "";
-      const tm  = row[idxTime] || "";
+      let priceStr = (idxClose >= 0 ? row[idxClose] : undefined) || "";
+      // Stooq may return N/D when no data; try open as a fallback if close is N/D
+      if (/^N\/?D$/i.test(priceStr) && idxOpen >= 0) priceStr = row[idxOpen] || "";
+      const price = parseFloat(priceStr);
+      const day = (idxDate >= 0 ? row[idxDate] : "") || "";
+      const tm  = (idxTime >= 0 ? row[idxTime] : "") || "";
       if (!isFinite(price)) throw new Error("Price parse failed");
       const ts = day ? (Date.parse(day + (tm ? "T" + tm : "")) / 1000) : Math.floor(Date.now()/1000);
+      return { price, ts };
+    }
+
+    async function fetchYahooQuote() {
+      // Yahoo Finance quote API (no key), proxied via AllOrigins to avoid CORS
+      const yahooURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY";
+      const url = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yahooURL) + "&" + Date.now();
+      const text = await fetchTextWithTimeout(url, 5000);
+      const data = JSON.parse(text);
+      const q = data && data.quoteResponse && data.quoteResponse.result && data.quoteResponse.result[0];
+      if (!q) throw new Error("Yahoo: no result");
+      const price = Number(q.regularMarketPrice ?? q.postMarketPrice ?? q.preMarketPrice);
+      const ts = Number(q.regularMarketTime ?? q.postMarketTime ?? q.preMarketTime ?? Math.floor(Date.now()/1000));
+      if (!isFinite(price)) throw new Error("Yahoo: price parse failed");
       return { price, ts };
     }
 
@@ -323,7 +341,7 @@
         }
         throw lastErr || new Error("Primary source failed");
       } catch (_) {
-        // Fallback source
+        // Try Stooq fallback mirror first
         try {
           const csv = await fetchTextWithTimeout(fallback, 5000);
           const { price, ts } = parseStooqCsv(csv);
@@ -335,12 +353,25 @@
           const cur = parseNumber(pInput.value);
           if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
           return;
-        } catch (e2) {
+        } catch (_) {}
+
+        // Then try Yahoo Finance via proxy
+        try {
+          const { price, ts } = await fetchYahooQuote();
+          $("livePrice").textContent = "$" + price.toFixed(2);
+          $("liveTime").textContent = "Updated: " + fmtTime(ts) + " • Yahoo";
+          label.textContent = "auto-filled from Yahoo";
+          label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
+          const pInput = $("price");
+          const cur = parseNumber(pInput.value);
+          if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
+          return;
+        } catch (e3) {
           $("livePrice").textContent = "$—";
           $("liveTime").textContent = "Update failed — enter P manually.";
           label.textContent = "manual entry";
           label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-amber-600 text-amber-300";
-          showMsg((e2 && e2.message) ? e2.message : "Live fetch failed.", "warn");
+          showMsg((e3 && e3.message) ? e3.message : "Live fetch failed.", "warn");
         }
       }
     }
