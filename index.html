@@ -259,49 +259,89 @@
       hideMsg();
     }
 
-    // ---------- Live price from Stooq via AllOrigins ----------
+    // ---------- Live price from Stooq with timeout/retries and fallback ----------
+    function withTimeout(ms, signal) {
+      const ctrl = new AbortController();
+      const onAbort = () => ctrl.abort();
+      if (signal) signal.addEventListener("abort", onAbort, { once: true });
+      const t = setTimeout(() => ctrl.abort(), ms);
+      return { signal: ctrl.signal, clear: () => { clearTimeout(t); if (signal) signal.removeEventListener("abort", onAbort); } };
+    }
+
+    async function fetchTextWithTimeout(url, ms) {
+      const timeout = withTimeout(ms);
+      try {
+        const res = await fetch(url, { cache: "no-store", signal: timeout.signal });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.text();
+      } finally {
+        timeout.clear();
+      }
+    }
+
+    function parseStooqCsv(csv) {
+      const lines = csv.trim().split(/\r?\n/);
+      if (lines.length < 2) throw new Error("No data");
+      const header = lines[0].split(",");
+      const row = lines[1].split(",");
+      const idxClose = header.findIndex(h => /close/i.test(h));
+      const idxDate  = header.findIndex(h => /^date$/i.test(h) || /d2/i.test(h));
+      const idxTime  = header.findIndex(h => /^time$/i.test(h) || /t2/i.test(h));
+      const price = parseFloat(row[idxClose]);
+      const day = row[idxDate] || "";
+      const tm  = row[idxTime] || "";
+      if (!isFinite(price)) throw new Error("Price parse failed");
+      const ts = day ? (Date.parse(day + (tm ? "T" + tm : "")) / 1000) : Math.floor(Date.now()/1000);
+      return { price, ts };
+    }
+
     async function fetchLivePrice() {
       const label = $("pStatus");
+      const stooqURL = "https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv";
+      const primary = "https://api.allorigins.win/raw?url=" + encodeURIComponent(stooqURL) + "&" + Date.now();
+      const fallback = "https://r.jina.ai/http://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv&" + Date.now();
+      const attempts = [3000, 5000]; // timeouts per attempt (ms)
+
+      // Try primary with retries
       try {
-        const stooqURL = "https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv";
-        const url = "https://api.allorigins.win/raw?url=" + encodeURIComponent(stooqURL) + "&" + Date.now();
-        const r = await fetch(url, { cache: "no-store" });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        const csv = await r.text();
-
-        const lines = csv.trim().split(/\r?\n/);
-        if (lines.length < 2) throw new Error("No data");
-        const header = lines[0].split(",");
-        const row = lines[1].split(",");
-
-        const idxClose = header.findIndex(h => /close/i.test(h));
-        const idxDate  = header.findIndex(h => /^date$/i.test(h) || /d2/i.test(h));
-        const idxTime  = header.findIndex(h => /^time$/i.test(h) || /t2/i.test(h));
-
-        const price = parseFloat(row[idxClose]);
-        const day = row[idxDate] || "";
-        const tm  = row[idxTime] || "";
-
-        if (!isFinite(price)) throw new Error("Price parse failed");
-
-        const ts = day ? (Date.parse(day + (tm ? "T" + tm : "")) / 1000) : Math.floor(Date.now()/1000);
-
-        $("livePrice").textContent = "$" + price.toFixed(2);
-        $("liveTime").textContent = "Updated: " + fmtTime(ts) + " • Stooq";
-        label.textContent = "auto-filled into P";
-        label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
-
-        // Auto-fill P if it's empty or invalid
-        const pInput = $("price");
-        const cur = parseNumber(pInput.value);
-        if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
-
-      } catch (e) {
-        $("livePrice").textContent = "$—";
-        $("liveTime").textContent = "Update failed — enter P manually.";
-        label.textContent = "manual entry";
-        label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-amber-600 text-amber-300";
-        showMsg((e && e.message) ? e.message : "Live fetch failed.", "warn");
+        let lastErr;
+        for (let i = 0; i < attempts.length; i++) {
+          try {
+            const csv = await fetchTextWithTimeout(primary, attempts[i]);
+            const { price, ts } = parseStooqCsv(csv);
+            $("livePrice").textContent = "$" + price.toFixed(2);
+            $("liveTime").textContent = "Updated: " + fmtTime(ts) + " • Stooq (AllOrigins)";
+            label.textContent = "auto-filled into P";
+            label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
+            const pInput = $("price");
+            const cur = parseNumber(pInput.value);
+            if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
+            return;
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+        throw lastErr || new Error("Primary source failed");
+      } catch (_) {
+        // Fallback source
+        try {
+          const csv = await fetchTextWithTimeout(fallback, 5000);
+          const { price, ts } = parseStooqCsv(csv);
+          $("livePrice").textContent = "$" + price.toFixed(2);
+          $("liveTime").textContent = "Updated: " + fmtTime(ts) + " • Stooq (fallback)";
+          label.textContent = "fallback source used";
+          label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-sky-600 text-sky-300";
+          const pInput = $("price");
+          const cur = parseNumber(pInput.value);
+          if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
+          return;
+        } catch (e2) {
+          $("livePrice").textContent = "$—";
+          $("liveTime").textContent = "Update failed — enter P manually.";
+          label.textContent = "manual entry";
+          label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-amber-600 text-amber-300";
+          showMsg((e2 && e2.message) ? e2.message : "Live fetch failed.", "warn");
+        }
       }
     }
 
