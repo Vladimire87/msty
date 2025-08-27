@@ -299,10 +299,7 @@
       return { price, ts };
     }
 
-    async function fetchYahooQuote() {
-      // Yahoo Finance quote API (no key), proxied via AllOrigins to avoid CORS
-      const yahooURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY";
-      const url = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yahooURL) + "&" + Date.now();
+    async function fetchYahooQuoteVia(url) {
       const text = await fetchTextWithTimeout(url, 5000);
       const data = JSON.parse(text);
       const q = data && data.quoteResponse && data.quoteResponse.result && data.quoteResponse.result[0];
@@ -317,7 +314,10 @@
       const label = $("pStatus");
       const stooqURL = "https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv";
       const primary = "https://api.allorigins.win/raw?url=" + encodeURIComponent(stooqURL) + "&" + Date.now();
-      const fallback = "https://r.jina.ai/http://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv&" + Date.now();
+      const fallback = "https://r.jina.ai/https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv&" + Date.now();
+      const yahooApi = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY";
+      const yahooAllOrigins = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yahooApi) + "&" + Date.now();
+      const yahooRjina = "https://r.jina.ai/https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY&" + Date.now();
       const attempts = [3000, 5000]; // timeouts per attempt (ms)
 
       // Try primary with retries
@@ -341,38 +341,42 @@
         }
         throw lastErr || new Error("Primary source failed");
       } catch (_) {
-        // Try Stooq fallback mirror first
-        try {
-          const csv = await fetchTextWithTimeout(fallback, 5000);
-          const { price, ts } = parseStooqCsv(csv);
-          $("livePrice").textContent = "$" + price.toFixed(2);
-          $("liveTime").textContent = "Updated: " + fmtTime(ts) + " • Stooq (fallback)";
-          label.textContent = "fallback source used";
-          label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-sky-600 text-sky-300";
-          const pInput = $("price");
-          const cur = parseNumber(pInput.value);
-          if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
-          return;
-        } catch (_) {}
+        // Try Yahoo (r.jina.ai) then Yahoo (AllOrigins), then Stooq fallback
+        const sources = [
+          async () => {
+            const { price, ts } = await fetchYahooQuoteVia(yahooRjina);
+            return { price, ts, labelText: "auto-filled from Yahoo (r.jina.ai)", timeSuffix: " • Yahoo" };
+          },
+          async () => {
+            const { price, ts } = await fetchYahooQuoteVia(yahooAllOrigins);
+            return { price, ts, labelText: "auto-filled from Yahoo (AllOrigins)", timeSuffix: " • Yahoo" };
+          },
+          async () => {
+            const csv = await fetchTextWithTimeout(fallback, 5000);
+            const { price, ts } = parseStooqCsv(csv);
+            return { price, ts, labelText: "fallback source used", timeSuffix: " • Stooq (fallback)" };
+          }
+        ];
 
-        // Then try Yahoo Finance via proxy
-        try {
-          const { price, ts } = await fetchYahooQuote();
-          $("livePrice").textContent = "$" + price.toFixed(2);
-          $("liveTime").textContent = "Updated: " + fmtTime(ts) + " • Yahoo";
-          label.textContent = "auto-filled from Yahoo";
-          label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
-          const pInput = $("price");
-          const cur = parseNumber(pInput.value);
-          if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
-          return;
-        } catch (e3) {
-          $("livePrice").textContent = "$—";
-          $("liveTime").textContent = "Update failed — enter P manually.";
-          label.textContent = "manual entry";
-          label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-amber-600 text-amber-300";
-          showMsg((e3 && e3.message) ? e3.message : "Live fetch failed.", "warn");
+        for (const s of sources) {
+          try {
+            const { price, ts, labelText, timeSuffix } = await s();
+            $("livePrice").textContent = "$" + price.toFixed(2);
+            $("liveTime").textContent = "Updated: " + fmtTime(ts) + timeSuffix;
+            label.textContent = labelText;
+            label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
+            const pInput = $("price");
+            const cur = parseNumber(pInput.value);
+            if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
+            return;
+          } catch (_) { /* try next */ }
         }
+
+        $("livePrice").textContent = "$—";
+        $("liveTime").textContent = "Update failed — enter P manually.";
+        label.textContent = "manual entry";
+        label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-amber-600 text-amber-300";
+        showMsg("Live fetch failed.", "warn");
       }
     }
 
