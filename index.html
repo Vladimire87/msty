@@ -242,7 +242,7 @@
       let note = noteOverride;
       if (!note) {
         const cond = strict ? "< T" : "≤ T";
-        note = `Condition "${cond}" is targeted with these inputs. Prior average was $${currentAvg.toFixed(4)}.`;
+        note = `Condition "${cond}" is targeted with these inputs. Prior average was ${currentAvg.toFixed(4)}.`;
         const eps = 1e-12;
         if (strict ? !(newAvg < T - eps) : !(newAvg <= T + eps)) {
           note += " Result is on the edge due to rounding — add 1 more share for safety.";
@@ -281,9 +281,14 @@
 
     function parseStooqCsv(csv) {
       const lines = csv.trim().split(/\r?\n/);
-      if (lines.length < 2) throw new Error("No data");
-      const header = lines[0].split(",");
-      const row = lines[1].split(",");
+      const csvStartIndex = lines.findIndex(line => line.startsWith("Symbol,Date,Time"));
+      if (csvStartIndex === -1) throw new Error("No CSV data found");
+
+      const csvLines = lines.slice(csvStartIndex);
+      if (csvLines.length < 2) throw new Error("No data");
+
+      const header = csvLines[0].split(",");
+      const row = csvLines[1].split(",");
       const idxClose = header.findIndex(h => /close/i.test(h));
       const idxOpen  = header.findIndex(h => /open/i.test(h));
       const idxDate  = header.findIndex(h => /^date$/i.test(h) || /d2/i.test(h));
@@ -313,71 +318,52 @@
     async function fetchLivePrice() {
       const label = $("pStatus");
       const stooqURL = "https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv";
-      const primary = "https://api.allorigins.win/raw?url=" + encodeURIComponent(stooqURL) + "&" + Date.now();
-      const fallback = "https://r.jina.ai/https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv&" + Date.now();
+      const stooqRjina = "https://r.jina.ai/" + stooqURL;
+      const stooqAllOrigins = "https://api.allorigins.win/raw?url=" + encodeURIComponent(stooqURL);
       const yahooApi = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY";
-      const yahooAllOrigins = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yahooApi) + "&" + Date.now();
-      const yahooRjina = "https://r.jina.ai/https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY&" + Date.now();
-      const attempts = [3000, 5000]; // timeouts per attempt (ms)
+      const yahooRjina = "https://r.jina.ai/" + yahooApi;
+      const yahooAllOrigins = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yahooApi);
 
-      // Try primary with retries
-      try {
-        let lastErr;
-        for (let i = 0; i < attempts.length; i++) {
-          try {
-            const csv = await fetchTextWithTimeout(primary, attempts[i]);
-            const { price, ts } = parseStooqCsv(csv);
-            $("livePrice").textContent = "$" + price.toFixed(2);
-            $("liveTime").textContent = "Updated: " + fmtTime(ts) + " • Stooq (AllOrigins)";
-            label.textContent = "auto-filled into P";
-            label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
-            const pInput = $("price");
-            const cur = parseNumber(pInput.value);
-            if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
-            return;
-          } catch (e) {
-            lastErr = e;
-          }
+      const sources = [
+        async () => {
+          const csv = await fetchTextWithTimeout(stooqRjina, 5000);
+          const { price, ts } = parseStooqCsv(csv);
+          return { price, ts, labelText: "auto-filled from Stooq (r.jina.ai)", timeSuffix: " • Stooq" };
+        },
+        async () => {
+          const { price, ts } = await fetchYahooQuoteVia(yahooRjina);
+          return { price, ts, labelText: "auto-filled from Yahoo (r.jina.ai)", timeSuffix: " • Yahoo" };
+        },
+        async () => {
+          const { price, ts } = await fetchYahooQuoteVia(yahooAllOrigins);
+          return { price, ts, labelText: "auto-filled from Yahoo (AllOrigins)", timeSuffix: " • Yahoo" };
+        },
+        async () => {
+          const csv = await fetchTextWithTimeout(stooqAllOrigins, 5000);
+          const { price, ts } = parseStooqCsv(csv);
+          return { price, ts, labelText: "fallback source used", timeSuffix: " • Stooq (fallback)" };
         }
-        throw lastErr || new Error("Primary source failed");
-      } catch (_) {
-        // Try Yahoo (r.jina.ai) then Yahoo (AllOrigins), then Stooq fallback
-        const sources = [
-          async () => {
-            const { price, ts } = await fetchYahooQuoteVia(yahooRjina);
-            return { price, ts, labelText: "auto-filled from Yahoo (r.jina.ai)", timeSuffix: " • Yahoo" };
-          },
-          async () => {
-            const { price, ts } = await fetchYahooQuoteVia(yahooAllOrigins);
-            return { price, ts, labelText: "auto-filled from Yahoo (AllOrigins)", timeSuffix: " • Yahoo" };
-          },
-          async () => {
-            const csv = await fetchTextWithTimeout(fallback, 5000);
-            const { price, ts } = parseStooqCsv(csv);
-            return { price, ts, labelText: "fallback source used", timeSuffix: " • Stooq (fallback)" };
-          }
-        ];
+      ];
 
-        for (const s of sources) {
-          try {
-            const { price, ts, labelText, timeSuffix } = await s();
-            $("livePrice").textContent = "$" + price.toFixed(2);
-            $("liveTime").textContent = "Updated: " + fmtTime(ts) + timeSuffix;
-            label.textContent = labelText;
-            label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
-            const pInput = $("price");
-            const cur = parseNumber(pInput.value);
-            if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
-            return;
-          } catch (_) { /* try next */ }
-        }
-
-        $("livePrice").textContent = "$—";
-        $("liveTime").textContent = "Update failed — enter P manually.";
-        label.textContent = "manual entry";
-        label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-amber-600 text-amber-300";
-        showMsg("Live fetch failed.", "warn");
+      for (const s of sources) {
+        try {
+          const { price, ts, labelText, timeSuffix } = await s();
+          $("livePrice").textContent = "$" + price.toFixed(2);
+          $("liveTime").textContent = "Updated: " + fmtTime(ts) + timeSuffix;
+          label.textContent = labelText;
+          label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-emerald-600 text-emerald-300";
+          const pInput = $("price");
+          const cur = parseNumber(pInput.value);
+          if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
+          return;
+        } catch (_) { /* try next */ }
       }
+
+      $("livePrice").textContent = "$—";
+      $("liveTime").textContent = "Update failed — enter P manually.";
+      label.textContent = "manual entry";
+      label.className = "text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-amber-600 text-amber-300";
+      showMsg("Live fetch failed.", "warn");
     }
 
     // Mark manual override of P
