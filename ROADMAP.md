@@ -25,8 +25,8 @@ This document outlines the planned features and improvements for the MSTY Averag
   - Refined field labels and helper texts for clarity (S/C/Avg/P/T).
   - Added “Quick Guide: How to fill the form” with concise explanations and tips.
   - Kept design intact; no server dependency.
-- 2025-08-29: Light theme + Theme toggle
-  - Added light/dark theme support with a toggle button in header.
-  - Light theme is default; dark theme via Tailwind `dark:` variants.
-  - Persists preference in `localStorage`; respects system preference on first load.
-  - Adjusted inputs, sections, result cards, and status badges for readability in both themes.
+## Backed Out
+
+- 2025-08-29: Light theme + Theme toggle (removed)
+  - Attempted light/dark support via Tailwind CDN config and toggle, but reverted due to instability in production.
+  - UI restored to dark theme only for reliability. Revisit later with a build step if needed.
