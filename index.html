@@ -14,6 +14,11 @@
       } catch {}
     })();
   </script>
+  <script>
+    // Configure Tailwind to use class-based dark mode so the toggle works
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { darkMode: 'class' };
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <meta name="description" content="How many MSTY shares to buy at price P to bring average below (or ≤) target T." />
