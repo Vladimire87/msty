@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MSTY Average Price Reducer — Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <meta name="description" content="How many MSTY shares to buy at price P to bring average below (or ≤) target T." />
   <style>
     :root { --ring: rgba(255,255,255,0.08); }
@@ -36,7 +37,7 @@
               <p id="liveTime" class="text-[11px] md:text-xs text-slate-400 mt-1">Fetching…</p>
             </div>
             <div class="text-right text-[10px] md:text-xs text-slate-400">
-              <p>Source: Stooq (msty.us) via CORS mirror.</p>
+              <p>Source: Stooq/Yahoo via CORS mirror (r.jina.ai).</p>
               <p>If it fails, you can enter P manually.</p>
             </div>
           </div>
@@ -150,6 +151,16 @@
           <p id="note" class="mt-2 text-xs md:text-sm text-slate-400"></p>
         </section>
 
+        <!-- Chart -->
+        <section id="chart-container" class="mt-5 hidden">
+          <h2 class="text-xl md:text-2xl font-bold text-center mb-4">MSTY Historical Price (30 days)</h2>
+          <canvas id="priceChart"></canvas>
+          <div id="chartImageWrap" class="hidden">
+            <img id="priceChartImg" alt="MSTY daily chart (fallback)" class="w-full rounded-xl border border-slate-700/60" />
+            <p id="chartFallbackNote" class="mt-2 text-xs text-slate-400 text-center">Fallback chart (image) loaded due to data source issues.</p>
+          </div>
+        </section>
+
         <!-- Footer -->
         <footer class="mt-6 text-xs md:text-sm text-slate-400 leading-relaxed">
           Formula (when P &lt; T): for strict “&lt; T” use <span class="font-mono">⌊(C − T·S)/(T − P)⌋ + 1</span>;
@@ -162,6 +173,13 @@
   <script src="./parseNumber.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
+    const DEBUG = false; // flip true to see detailed fetch errors
+    const dbg = {
+      error: (...a) => { if (DEBUG) console.error(...a); },
+      warn:  (...a) => { if (DEBUG) console.warn(...a); },
+      info:  (...a) => { if (DEBUG) console.info(...a); },
+      log:   (...a) => { if (DEBUG) console.log(...a); },
+    };
 
     // ---------- Helpers ----------
     const fmtMoney = (x) => isFinite(x) ? ("$" + x.toFixed(2)) : "—";
@@ -304,45 +322,37 @@
       return { price, ts };
     }
 
-    async function fetchYahooQuoteVia(url) {
-      const text = await fetchTextWithTimeout(url, 5000);
-      const data = JSON.parse(text);
-      const q = data && data.quoteResponse && data.quoteResponse.result && data.quoteResponse.result[0];
-      if (!q) throw new Error("Yahoo: no result");
-      const price = Number(q.regularMarketPrice ?? q.postMarketPrice ?? q.preMarketPrice);
-      const ts = Number(q.regularMarketTime ?? q.postMarketTime ?? q.preMarketTime ?? Math.floor(Date.now()/1000));
-      if (!isFinite(price)) throw new Error("Yahoo: price parse failed");
-      return { price, ts };
-    }
-
     async function fetchLivePrice() {
       const label = $("pStatus");
-      const stooqURL = "https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv";
-      const stooqRjina = "https://r.jina.ai/" + stooqURL;
-      const stooqAllOrigins = "https://api.allorigins.win/raw?url=" + encodeURIComponent(stooqURL);
-      const yahooApi = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY";
-      const yahooRjina = "https://r.jina.ai/" + yahooApi;
-      const yahooAllOrigins = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yahooApi);
+      const stooqUrls = [
+        "https://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv",
+        "http://stooq.com/q/l/?s=msty.us&f=sd2t2ohlcv&h&e=csv",
+      ];
+      const yahooUrls = [
+        "https://query1.finance.yahoo.com/v7/finance/quote?symbols=MSTY",
+        "https://query2.finance.yahoo.com/v7/finance/quote?symbols=MSTY",
+      ];
 
       const sources = [
-        async () => {
-          const csv = await fetchTextWithTimeout(stooqRjina, 5000);
+        // Stooq via mirror (https and http variants)
+        ...stooqUrls.map(u => async () => {
+          const csv = await fetchTextWithTimeout("https://r.jina.ai/" + u, 6000);
           const { price, ts } = parseStooqCsv(csv);
-          return { price, ts, labelText: "auto-filled from Stooq (r.jina.ai)", timeSuffix: " • Stooq" };
-        },
-        async () => {
-          const { price, ts } = await fetchYahooQuoteVia(yahooRjina);
-          return { price, ts, labelText: "auto-filled from Yahoo (r.jina.ai)", timeSuffix: " • Yahoo" };
-        },
-        async () => {
-          const { price, ts } = await fetchYahooQuoteVia(yahooAllOrigins);
-          return { price, ts, labelText: "auto-filled from Yahoo (AllOrigins)", timeSuffix: " • Yahoo" };
-        },
-        async () => {
-          const csv = await fetchTextWithTimeout(stooqAllOrigins, 5000);
-          const { price, ts } = parseStooqCsv(csv);
-          return { price, ts, labelText: "fallback source used", timeSuffix: " • Stooq (fallback)" };
-        }
+          return { price, ts, labelText: "auto-filled from Stooq (mirror)", timeSuffix: " • Stooq" };
+        }),
+        // Yahoo via mirror (query1, query2)
+        ...yahooUrls.map(u => async () => {
+          const text = await fetchTextWithTimeout("https://r.jina.ai/" + u, 6000);
+          const t = text.trim();
+          if (!t.startsWith("{")) throw new Error("Yahoo proxy returned non-JSON");
+          const data = JSON.parse(t);
+          const q = data && data.quoteResponse && data.quoteResponse.result && data.quoteResponse.result[0];
+          if (!q) throw new Error("Yahoo: no result");
+          const price = Number(q.regularMarketPrice ?? q.postMarketPrice ?? q.preMarketPrice);
+          const ts = Number(q.regularMarketTime ?? q.postMarketTime ?? q.preMarketTime ?? Math.floor(Date.now()/1000));
+          if (!isFinite(price)) throw new Error("Yahoo: price parse failed");
+          return { price, ts, labelText: "auto-filled from Yahoo (mirror)", timeSuffix: " • Yahoo" };
+        }),
       ];
 
       for (const s of sources) {
@@ -356,7 +366,7 @@
           const cur = parseNumber(pInput.value);
           if (!isFinite(cur) || cur <= 0) pInput.value = price.toFixed(2);
           return;
-        } catch (_) { /* try next */ }
+        } catch (e) { /* try next */ }
       }
 
       $("livePrice").textContent = "$—";
@@ -375,6 +385,150 @@
 
     // Kick off on load
     fetchLivePrice();
+
+    // ---------- Historical Chart ----------
+    async function fetchHistoricalData() {
+      const stooqHistUrls = [
+        "https://stooq.com/q/d/l/?s=MSTY.US&i=d&c=30",
+        "http://stooq.com/q/d/l/?s=MSTY.US&i=d&c=30",
+      ];
+      const yahooHistUrls = [
+        "https://query1.finance.yahoo.com/v8/finance/chart/MSTY?range=1mo&interval=1d",
+        "https://query2.finance.yahoo.com/v8/finance/chart/MSTY?range=1mo&interval=1d",
+      ];
+      const sources = [
+        ...stooqHistUrls.map(u => async () => parseStooqHistoricalCsv(await fetchTextWithTimeout("https://r.jina.ai/" + u, 7000))),
+        ...yahooHistUrls.map(u => async () => parseYahooHistoricalJson(await fetchTextWithTimeout("https://r.jina.ai/" + u, 7000))),
+      ];
+      for (const s of sources) {
+        try {
+          const data = await s();
+          if (data && data.labels && data.labels.length >= 2) {
+            $("chart-container").classList.remove("hidden");
+            $("chartImageWrap").classList.add("hidden");
+            $("priceChart").classList.remove("hidden");
+            renderChart(data);
+            return;
+          }
+        } catch (e) {
+          dbg.warn("Historical source failed:", e && (e.message || e));
+        }
+      }
+      // Fallback to image chart (no JS data needed)
+      renderChartImageFallback();
+    }
+
+    function renderChartImageFallback() {
+      const img = $("priceChartImg");
+      // Finviz static chart image as a last-resort fallback
+      const src = "https://charts2.finviz.com/chart.ashx?t=MSTY&p=d&ty=c&ta=1&s=l";
+      img.onerror = () => {
+        $("chartFallbackNote").textContent = "Fallback chart failed to load.";
+      };
+      img.src = src;
+      $("chart-container").classList.remove("hidden");
+      $("priceChart").classList.add("hidden");
+      $("chartImageWrap").classList.remove("hidden");
+    }
+
+    function parseStooqHistoricalCsv(csv) {
+      const lines = (csv || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let start = lines.findIndex(l => /^date\s*,\s*open\s*,\s*high\s*,\s*low\s*,\s*close\s*,\s*volume/i.test(l));
+      if (start !== -1) start += 1; // skip header
+      else start = lines.findIndex(l => /^\d{4}-\d{2}-\d{2}\s*,/.test(l));
+      if (start === -1) return null; // no usable CSV
+
+      const labels = [];
+      const prices = [];
+      for (let i = start; i < lines.length; i++) {
+        const parts = lines[i].split(",");
+        if (parts.length < 5) continue;
+        const date = parts[0];
+        const closeStr = parts[4];
+        if (/^N\/?D$/i.test(closeStr)) continue;
+        const close = parseFloat(closeStr);
+        if (date && isFinite(close)) {
+          // oldest -> newest
+          labels.push(date);
+          prices.push(close);
+        }
+      }
+      if (!labels.length) return null;
+      return { labels, prices };
+    }
+
+    function parseYahooHistoricalJson(text) {
+      const t = (text || "").trim();
+      if (!t.startsWith("{")) return null; // e.g., proxy returned HTML
+      const data = JSON.parse(t);
+      const r = data && data.chart && data.chart.result && data.chart.result[0];
+      if (!r) return null;
+      const ts = Array.isArray(r.timestamp) ? r.timestamp : [];
+      const quote = r.indicators && r.indicators.quote && r.indicators.quote[0] || {};
+      const closes = Array.isArray(quote.close) ? quote.close : [];
+      const labels = [];
+      const prices = [];
+      for (let i = 0; i < ts.length; i++) {
+        const tm = Number(ts[i]);
+        const c = Number(closes[i]);
+        if (!isFinite(tm) || !isFinite(c)) continue;
+        const day = new Date(tm * 1000).toISOString().slice(0, 10);
+        labels.push(day);
+        prices.push(c);
+      }
+      if (!labels.length) return null;
+      return { labels, prices };
+    }
+
+    function renderChart(data) {
+      const ctx = $("priceChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: "Price",
+            data: data.prices,
+            borderColor: "#38bdf8",
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              ticks: {
+                color: "#94a3b8"
+              },
+              grid: {
+                color: "rgba(148, 163, 184, 0.1)"
+              }
+            },
+            y: {
+              ticks: {
+                color: "#94a3b8",
+                callback: function(value) {
+                  const num = Number(value);
+                  return isFinite(num) ? ("$" + num.toFixed(2)) : value;
+                }
+              },
+              grid: {
+                color: "rgba(148, 163, 184, 0.1)"
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+
+    fetchHistoricalData();
   </script>
 </body>
 </html>
