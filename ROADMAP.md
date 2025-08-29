@@ -25,6 +25,10 @@ This document outlines the planned features and improvements for the MSTY Averag
   - Refined field labels and helper texts for clarity (S/C/Avg/P/T).
   - Added “Quick Guide: How to fill the form” with concise explanations and tips.
   - Kept design intact; no server dependency.
+ - 2025-08-29: Modernize Tailwind styles (dark theme)
+   - Switched to a cleaner zinc-based dark palette (backgrounds, text, borders).
+   - Updated inputs, buttons, cards, and helper text for consistent, modern look.
+   - Tuned chart axis colors to match the new palette.
 ## Backed Out
 
 - 2025-08-29: Light theme + Theme toggle (removed)
