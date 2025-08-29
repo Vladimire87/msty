@@ -15,9 +15,13 @@
     })();
   </script>
   <script>
-    // Configure Tailwind to use class-based dark mode so the toggle works
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = { darkMode: 'class' };
+    // Configure Tailwind CDN to use class-based dark mode
+    // Must be defined before loading the CDN script
+    try { tailwind } catch(e) { /* noop - tailwind global will be defined by CDN */ }
+    // eslint-disable-next-line no-undef
+    tailwind = typeof tailwind === 'object' ? tailwind : {};
+    // eslint-disable-next-line no-undef
+    tailwind.config = { darkMode: 'class' };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -436,9 +440,13 @@
     if (themeBtn) {
       themeBtn.addEventListener('click', () => {
         const isDark = document.documentElement.classList.toggle('dark');
+        // Keep body in sync too (defensive for some CSS that scopes to body)
+        document.body.classList.toggle('dark', isDark);
         try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch {}
         updateThemeBtn();
       });
+      // Ensure body reflects initial html state
+      document.body.classList.toggle('dark', document.documentElement.classList.contains('dark'));
       updateThemeBtn();
     }
 
