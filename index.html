@@ -12,35 +12,58 @@
     body { font-feature-settings: "tnum" 1, "cv02" 1; }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100">
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100">
   <!-- Top-centered layout; scrolls naturally on small screens -->
   <main class="min-h-screen flex justify-center px-4 py-6">
     <div class="w-full max-w-2xl">
-      <div class="bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-2xl p-6 md:p-8 ring-1 ring-[var(--ring)]">
+      <div class="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl p-6 md:p-8 ring-1 ring-[var(--ring)]">
         <!-- Header -->
         <header class="text-center mb-6">
           <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">MSTY Average Price Reducer</h1>
-          <p class="text-zinc-300 mt-2 text-sm md:text-base">
+          <p class="text-slate-300 mt-2 text-sm md:text-base">
             For <span class="font-semibold">MSTY</span> (YieldMax MSTR Option Income Strategy ETF). Enter your current position, target average, and buy price — we’ll calculate how many shares to buy.
           </p>
         </header>
 
         <!-- Live price (auto-used for P) -->
-        <section class="mb-6 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-4 md:p-5">
+        <section class="mb-6 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 md:p-5">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
-              <p class="text-zinc-300 text-sm md:text-base">Live MSTY price</p>
+              <p class="text-slate-300 text-sm md:text-base">Live MSTY price</p>
               <div class="flex items-end gap-2">
                 <p id="livePrice" class="text-3xl md:text-4xl font-extrabold tabular-nums">$—</p>
-                <span id="pStatus" class="text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-zinc-700 text-zinc-300">waiting…</span>
+                <span id="pStatus" class="text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-slate-600 text-slate-300">waiting…</span>
               </div>
-              <p id="liveTime" class="text-[11px] md:text-xs text-zinc-400 mt-1">Fetching…</p>
+              <p id="liveTime" class="text-[11px] md:text-xs text-slate-400 mt-1">Fetching…</p>
             </div>
-            <div class="text-right text-[10px] md:text-xs text-zinc-400">
+            <div class="text-right text-[10px] md:text-xs text-slate-400">
               <p>Source: Stooq/Yahoo via CORS mirror (r.jina.ai).</p>
               <p>If it fails, you can enter P manually.</p>
             </div>
           </div>
+        </section>
+
+        <!-- Distributions (Dividends) -->
+        <section id="divSection" class="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 md:p-5 hidden">
+          <h2 class="text-lg md:text-xl font-bold mb-3 text-amber-200">MSTY Distributions (recent)</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-3">
+              <p class="text-slate-300 text-xs md:text-sm">Last payout</p>
+              <p id="divLastAmt" class="text-xl font-bold">—</p>
+              <p id="divLastDate" class="text-[11px] md:text-xs text-slate-400">—</p>
+            </div>
+            <div class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-3">
+              <p class="text-slate-300 text-xs md:text-sm">3-mo average</p>
+              <p id="divAvg3" class="text-xl font-bold">—</p>
+              <p class="text-[11px] md:text-xs text-slate-400">Based on last 3 payouts</p>
+            </div>
+            <div class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-3">
+              <p class="text-slate-300 text-xs md:text-sm">Est. next month</p>
+              <p id="divEstNext" class="text-xl font-bold">—</p>
+              <p id="divEstYield" class="text-[11px] md:text-xs text-slate-400">Est. yield: —</p>
+            </div>
+          </div>
+          <p class="mt-2 text-[11px] md:text-xs text-slate-400">Estimates are approximations based on recent distributions; actual payouts vary.</p>
         </section>
 
         <!-- Calculator form -->
@@ -48,62 +71,62 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Shares -->
             <div>
-              <label for="shares" class="block text-zinc-200 font-medium mb-1 text-sm md:text-base">
+              <label for="shares" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
                 Current shares S <span class="text-slate-400 text-xs">(required)</span>
               </label>
               <input id="shares" inputmode="decimal" placeholder="e.g., 1000"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-zinc-900/60 border border-zinc-800 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                      aria-label="Current shares">
-              <p class="mt-1 text-xs text-zinc-400">Your current position size. Fractional shares are OK.</p>
+              <p class="mt-1 text-xs text-slate-400">Your current position size. Fractional shares are OK.</p>
             </div>
 
             <!-- Cost basis -->
             <div>
-              <label for="cost" class="block text-zinc-200 font-medium mb-1 text-sm md:text-base">
+              <label for="cost" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
                 Total cost basis C, $ <span class="text-slate-400 text-xs">(required or use Avg)</span>
               </label>
               <input id="cost" inputmode="decimal" placeholder="e.g., 25000.00"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-zinc-900/60 border border-zinc-800 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                      aria-label="Current cost basis">
-              <p class="mt-1 text-xs text-zinc-400">If you don’t know C, leave it empty and fill “Avg” — we’ll use C = S × Avg.</p>
+              <p class="mt-1 text-xs text-slate-400">If you don’t know C, leave it empty and fill “Avg” — we’ll use C = S × Avg.</p>
             </div>
 
             <!-- Avg (optional) -->
             <div>
-              <label for="avg" class="block text-zinc-200 font-medium mb-1 text-sm md:text-base">
+              <label for="avg" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
                 Average price Avg, $ <span class="text-slate-400 text-xs">(optional)</span>
               </label>
               <input id="avg" inputmode="decimal" placeholder="e.g., 23.35"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-zinc-900/60 border border-zinc-800 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                      aria-label="Current average price">
-              <p class="mt-1 text-xs text-zinc-400">Only used if C is empty.</p>
+              <p class="mt-1 text-xs text-slate-400">Only used if C is empty.</p>
             </div>
 
             <!-- Buy price -->
             <div>
-              <label for="price" class="block text-zinc-200 font-medium mb-1 text-sm md:text-base">
+              <label for="price" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
                 Buy price P, $ <span class="text-slate-400 text-xs">(required)</span>
               </label>
               <input id="price" inputmode="decimal" placeholder="auto-filled from live price"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-zinc-900/60 border border-zinc-800 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                      aria-label="Buy price">
-              <p class="mt-1 text-xs text-zinc-400">Auto-filled from live MSTY price; you can override it.</p>
+              <p class="mt-1 text-xs text-slate-400">Auto-filled from live MSTY price; you can override it.</p>
             </div>
 
             <!-- Target -->
             <div>
-              <label for="target" class="block text-zinc-200 font-medium mb-1 text-sm md:text-base">
+              <label for="target" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
                 Target average T, $ <span class="text-slate-400 text-xs">(required)</span>
               </label>
               <input id="target" inputmode="decimal" placeholder="e.g., 23.00"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-zinc-900/60 border border-zinc-800 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                      aria-label="Target average">
             </div>
 
             <!-- Strict toggle -->
             <div class="flex items-center gap-2 pt-1">
-              <input id="strict" type="checkbox" class="h-5 w-5 rounded border-zinc-700 text-sky-600 focus:ring-sky-500" checked>
-              <label for="strict" class="text-sm md:text-base text-zinc-200">
+              <input id="strict" type="checkbox" class="h-5 w-5 rounded border-slate-700 text-sky-600 focus:ring-sky-500" checked>
+              <label for="strict" class="text-sm md:text-base text-slate-200">
                 Require strictly <span class="font-semibold">&lt; T</span> <span class="text-slate-400 text-xs">(unchecked: allow ≤ T)</span>
               </label>
             </div>
@@ -115,7 +138,7 @@
               Calculate
             </button>
             <button type="button" onclick="resetForm();"
-                    class="w-full sm:w-auto px-6 py-3 rounded-xl bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-800 font-semibold text-sm md:text-base">
+                    class="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-slate-800 font-semibold text-sm md:text-base">
               Reset
             </button>
           </div>
@@ -128,27 +151,27 @@
         <section id="result" class="mt-5 hidden">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-4">
-              <p class="text-zinc-300 text-sm md:text-base">Shares to buy</p>
+              <p class="text-slate-300 text-sm md:text-base">Shares to buy</p>
               <p id="need" class="text-2xl md:text-3xl font-extrabold">—</p>
             </div>
             <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
-              <p class="text-zinc-300 text-sm md:text-base">Additional spend</p>
+              <p class="text-slate-300 text-sm md:text-base">Additional spend</p>
               <p id="spend" class="text-2xl md:text-3xl font-extrabold">—</p>
             </div>
-            <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-              <p class="text-zinc-300 text-sm md:text-base">Final shares</p>
+            <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+              <p class="text-slate-300 text-sm md:text-base">Final shares</p>
               <p id="finalShares" class="text-xl md:text-2xl font-bold">—</p>
             </div>
-            <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-              <p class="text-zinc-300 text-sm md:text-base">Final cost basis</p>
+            <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+              <p class="text-slate-300 text-sm md:text-base">Final cost basis</p>
               <p id="finalCost" class="text-xl md:text-2xl font-bold">—</p>
             </div>
             <div class="md:col-span-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-              <p class="text-zinc-300 text-sm md:text-base">New average price</p>
+              <p class="text-slate-300 text-sm md:text-base">New average price</p>
               <p id="newAvg" class="text-2xl md:text-3xl font-extrabold">—</p>
             </div>
           </div>
-          <p id="note" class="mt-2 text-xs md:text-sm text-zinc-400"></p>
+          <p id="note" class="mt-2 text-xs md:text-sm text-slate-400"></p>
         </section>
 
         <!-- Chart -->
@@ -156,15 +179,15 @@
           <h2 class="text-xl md:text-2xl font-bold text-center mb-4">MSTY Historical Price (30 days)</h2>
           <canvas id="priceChart"></canvas>
           <div id="chartImageWrap" class="hidden">
-              <img id="priceChartImg" alt="MSTY daily chart (fallback)" class="w-full rounded-xl border border-zinc-800" />
-            <p id="chartFallbackNote" class="mt-2 text-xs text-zinc-400 text-center">Fallback chart (image) loaded due to data source issues.</p>
+            <img id="priceChartImg" alt="MSTY daily chart (fallback)" class="w-full rounded-xl border border-slate-700/60" />
+            <p id="chartFallbackNote" class="mt-2 text-xs text-slate-400 text-center">Fallback chart (image) loaded due to data source issues.</p>
           </div>
         </section>
 
         <!-- Quick Guide / FAQ -->
-        <section class="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 md:p-5">
+        <section class="mt-6 rounded-2xl border border-slate-700/60 bg-slate-900/40 p-4 md:p-5">
           <h2 class="text-lg md:text-xl font-bold mb-2">Quick Guide: How to fill the form</h2>
-          <ul class="list-disc pl-5 space-y-1 text-sm md:text-base text-zinc-300">
+          <ul class="list-disc pl-5 space-y-1 text-sm md:text-base text-slate-300">
             <li><span class="font-semibold">S — Current shares:</span> total number of MSTY shares you already own. Fractional shares are OK.</li>
             <li><span class="font-semibold">C — Total cost basis ($):</span> how much you’ve spent so far on this position. If unknown, leave it empty and use <span class="font-semibold">Avg</span>.</li>
             <li><span class="font-semibold">Avg — Current average price ($):</span> only used when <span class="font-semibold">C</span> is empty; the calculator uses <span class="font-mono">C = S × Avg</span>.</li>
@@ -172,13 +195,13 @@
             <li><span class="font-semibold">T — Target average ($):</span> the new average price you want to reach after buying more shares.</li>
             <li><span class="font-semibold">Strict &lt; T:</span> when checked, result guarantees the new average is strictly below <span class="font-semibold">T</span>; when unchecked, <span class="font-mono">≤ T</span> is allowed.</li>
           </ul>
-          <p class="mt-3 text-xs md:text-sm text-zinc-400">
+          <p class="mt-3 text-xs md:text-sm text-slate-400">
             Tip: If the result looks borderline due to rounding, the tool will suggest adding 1 extra share for safety.
           </p>
         </section>
 
         <!-- Footer -->
-        <footer class="mt-6 text-xs md:text-sm text-zinc-500 leading-relaxed">
+        <footer class="mt-6 text-xs md:text-sm text-slate-400 leading-relaxed">
           Formula (when P &lt; T): for strict “&lt; T” use <span class="font-mono">⌊(C − T·S)/(T − P)⌋ + 1</span>;
           for “≤ T” use <span class="font-mono">⌈(C − T·S)/(T − P)⌉</span>. If <span class="font-mono">C</span> is omitted, we use <span class="font-mono">C = S·Avg</span>. Fees/taxes ignored.
         </footer>
@@ -401,6 +424,73 @@
 
     // Kick off on load
     fetchLivePrice();
+    
+    // ---------- Distributions (Dividends) ----------
+    let DIV_DATA = { last: null, avg3: null };
+    function fmtUSD(x, d=4) { return isFinite(x) ? ("$" + Number(x).toFixed(d)) : "—"; }
+    function setDivUI({ lastAmt, lastDateStr, avg3, estNext, yieldPct }) {
+      $("divLastAmt").textContent = fmtUSD(lastAmt);
+      $("divLastDate").textContent = lastDateStr || "—";
+      $("divAvg3").textContent = fmtUSD(avg3);
+      $("divEstNext").textContent = fmtUSD(estNext);
+      $("divEstYield").textContent = isFinite(yieldPct) ? ("Est. yield: " + yieldPct.toFixed(2) + "%") : "Est. yield: —";
+      $("divSection").classList.remove("hidden");
+    }
+    function recomputeYield() {
+      const p = parseNumber($("price").value);
+      if (!DIV_DATA || !DIV_DATA.avg3 || !isFinite(p) || p <= 0) { $("divEstYield").textContent = "Est. yield: —"; return; }
+      const annual = DIV_DATA.avg3 * 12;
+      const y = (annual / p) * 100;
+      $("divEstYield").textContent = isFinite(y) ? ("Est. yield: " + y.toFixed(2) + "%") : "Est. yield: —";
+    }
+    $("price").addEventListener("input", recomputeYield);
+
+    function parseYahooDividends(text) {
+      const t = (text || "").trim();
+      if (!t.startsWith("{")) return [];
+      const data = JSON.parse(t);
+      const r = data && data.chart && data.chart.result && data.chart.result[0];
+      if (!r || !r.events || !r.events.dividends) return [];
+      const divs = r.events.dividends;
+      const out = [];
+      for (const k of Object.keys(divs)) {
+        const ev = divs[k];
+        const amount = Number(ev.amount);
+        const ts = Number(ev.date || k);
+        if (isFinite(amount) && isFinite(ts)) {
+          out.push({ ts, amount, day: new Date(ts * 1000).toISOString().slice(0,10) });
+        }
+      }
+      // sort newest first
+      out.sort((a,b) => b.ts - a.ts);
+      return out;
+    }
+
+    async function fetchDividends() {
+      const urls = [
+        "https://query1.finance.yahoo.com/v8/finance/chart/MSTY?range=6mo&interval=1d&events=div",
+        "https://query2.finance.yahoo.com/v8/finance/chart/MSTY?range=6mo&interval=1d&events=div",
+      ];
+      for (const u of urls) {
+        try {
+          const txt = await fetchTextWithTimeout("https://r.jina.ai/" + u, 7000);
+          const items = parseYahooDividends(txt);
+          if (items && items.length) {
+            const last = items[0];
+            const take = items.slice(0, 3);
+            const avg3 = take.reduce((s,x)=>s+x.amount,0) / take.length;
+            const estNext = avg3; // use 3-mo avg as estimate
+            DIV_DATA = { last: last.amount, avg3 };
+            setDivUI({ lastAmt: last.amount, lastDateStr: last.day, avg3, estNext, yieldPct: NaN });
+            recomputeYield();
+            return;
+          }
+        } catch (_) { /* try next */ }
+      }
+      // no data; keep section hidden
+    }
+
+    fetchDividends();
     // Theme toggle removed
 
     // ---------- Historical Chart ----------
@@ -517,22 +607,22 @@
           scales: {
             x: {
               ticks: {
-                color: "#a1a1aa"
+                color: "#94a3b8"
               },
               grid: {
-                color: "rgba(161, 161, 170, 0.12)"
+                color: "rgba(148, 163, 184, 0.12)"
               }
             },
             y: {
               ticks: {
-                color: "#a1a1aa",
+                color: "#94a3b8",
                 callback: function(value) {
                   const num = Number(value);
                   return isFinite(num) ? ("$" + num.toFixed(2)) : value;
                 }
               },
               grid: {
-                color: "rgba(161, 161, 170, 0.12)"
+                color: "rgba(148, 163, 184, 0.12)"
               }
             }
           },
