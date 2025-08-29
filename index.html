@@ -43,28 +43,7 @@
           </div>
         </section>
 
-        <!-- Distributions (Dividends) -->
-        <section id="divSection" class="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 md:p-5 hidden">
-          <h2 class="text-lg md:text-xl font-bold mb-3 text-amber-200">MSTY Distributions (recent)</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-3">
-              <p class="text-slate-300 text-xs md:text-sm">Last payout</p>
-              <p id="divLastAmt" class="text-xl font-bold">—</p>
-              <p id="divLastDate" class="text-[11px] md:text-xs text-slate-400">—</p>
-            </div>
-            <div class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-3">
-              <p class="text-slate-300 text-xs md:text-sm">3-mo average</p>
-              <p id="divAvg3" class="text-xl font-bold">—</p>
-              <p class="text-[11px] md:text-xs text-slate-400">Based on last 3 payouts</p>
-            </div>
-            <div class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-3">
-              <p class="text-slate-300 text-xs md:text-sm">Est. next month</p>
-              <p id="divEstNext" class="text-xl font-bold">—</p>
-              <p id="divEstYield" class="text-[11px] md:text-xs text-slate-400">Est. yield: —</p>
-            </div>
-          </div>
-          <p class="mt-2 text-[11px] md:text-xs text-slate-400">Estimates are approximations based on recent distributions; actual payouts vary.</p>
-        </section>
+        
 
         <!-- Calculator form -->
         <form id="calcForm" class="space-y-5" onsubmit="event.preventDefault(); calculate();">
@@ -425,72 +404,7 @@
     // Kick off on load
     fetchLivePrice();
     
-    // ---------- Distributions (Dividends) ----------
-    let DIV_DATA = { last: null, avg3: null };
-    function fmtUSD(x, d=4) { return isFinite(x) ? ("$" + Number(x).toFixed(d)) : "—"; }
-    function setDivUI({ lastAmt, lastDateStr, avg3, estNext, yieldPct }) {
-      $("divLastAmt").textContent = fmtUSD(lastAmt);
-      $("divLastDate").textContent = lastDateStr || "—";
-      $("divAvg3").textContent = fmtUSD(avg3);
-      $("divEstNext").textContent = fmtUSD(estNext);
-      $("divEstYield").textContent = isFinite(yieldPct) ? ("Est. yield: " + yieldPct.toFixed(2) + "%") : "Est. yield: —";
-      $("divSection").classList.remove("hidden");
-    }
-    function recomputeYield() {
-      const p = parseNumber($("price").value);
-      if (!DIV_DATA || !DIV_DATA.avg3 || !isFinite(p) || p <= 0) { $("divEstYield").textContent = "Est. yield: —"; return; }
-      const annual = DIV_DATA.avg3 * 12;
-      const y = (annual / p) * 100;
-      $("divEstYield").textContent = isFinite(y) ? ("Est. yield: " + y.toFixed(2) + "%") : "Est. yield: —";
-    }
-    $("price").addEventListener("input", recomputeYield);
-
-    function parseYahooDividends(text) {
-      const t = (text || "").trim();
-      if (!t.startsWith("{")) return [];
-      const data = JSON.parse(t);
-      const r = data && data.chart && data.chart.result && data.chart.result[0];
-      if (!r || !r.events || !r.events.dividends) return [];
-      const divs = r.events.dividends;
-      const out = [];
-      for (const k of Object.keys(divs)) {
-        const ev = divs[k];
-        const amount = Number(ev.amount);
-        const ts = Number(ev.date || k);
-        if (isFinite(amount) && isFinite(ts)) {
-          out.push({ ts, amount, day: new Date(ts * 1000).toISOString().slice(0,10) });
-        }
-      }
-      // sort newest first
-      out.sort((a,b) => b.ts - a.ts);
-      return out;
-    }
-
-    async function fetchDividends() {
-      const urls = [
-        "https://query1.finance.yahoo.com/v8/finance/chart/MSTY?range=6mo&interval=1d&events=div",
-        "https://query2.finance.yahoo.com/v8/finance/chart/MSTY?range=6mo&interval=1d&events=div",
-      ];
-      for (const u of urls) {
-        try {
-          const txt = await fetchTextWithTimeout("https://r.jina.ai/" + u, 7000);
-          const items = parseYahooDividends(txt);
-          if (items && items.length) {
-            const last = items[0];
-            const take = items.slice(0, 3);
-            const avg3 = take.reduce((s,x)=>s+x.amount,0) / take.length;
-            const estNext = avg3; // use 3-mo avg as estimate
-            DIV_DATA = { last: last.amount, avg3 };
-            setDivUI({ lastAmt: last.amount, lastDateStr: last.day, avg3, estNext, yieldPct: NaN });
-            recomputeYield();
-            return;
-          }
-        } catch (_) { /* try next */ }
-      }
-      // no data; keep section hidden
-    }
-
-    fetchDividends();
+    // Distributions (Dividends) removed at user's request
     // Theme toggle removed
 
     // ---------- Historical Chart ----------
