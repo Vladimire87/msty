@@ -21,3 +21,7 @@ This document outlines the planned features and improvements for the MSTY Averag
   - Robust fallbacks: if both APIs fail, show a static Finviz chart image as a last resort.
   - Noise reduction: quiet error handling with optional DEBUG flag; pinned Chart.js CDN version to avoid sourcemap warnings.
   - Note: `server.js` exists for local dev proxying but is not required for GitHub Pages.
+- 2025-08-29: Copy improvements + in-page Quick Guide
+  - Refined field labels and helper texts for clarity (S/C/Avg/P/T).
+  - Added “Quick Guide: How to fill the form” with concise explanations and tips.
+  - Kept design intact; no server dependency.
