@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MSTY Average Price Reducer — Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter var", "Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Ubuntu", "Cantarell", "Noto Sans", "Helvetica Neue", "Arial", "Apple Color Emoji", "Segoe UI Emoji"],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <meta name="description" content="How many MSTY shares to buy at price P to bring average below (or ≤) target T." />
   <style>
@@ -12,29 +26,33 @@
     body { font-feature-settings: "tnum" 1, "cv02" 1; }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100">
+<body class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 font-sans">
   <!-- Top-centered layout; scrolls naturally on small screens -->
-  <main class="min-h-screen flex justify-center px-4 py-6">
+  <main class="min-h-screen flex justify-center px-3 py-4 md:px-4 md:py-6">
     <div class="w-full max-w-2xl">
-      <div class="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl p-6 md:p-8 ring-1 ring-[var(--ring)]">
+      <div class="bg-slate-800/40 backdrop-blur-xl rounded-2xl shadow-2xl p-5 md:p-6 ring-1 ring-[var(--ring)]">
         <!-- Header -->
-        <header class="text-center mb-6">
-          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">MSTY Average Price Reducer</h1>
-          <p class="text-slate-300 mt-2 text-sm md:text-base">
+        <header class="text-center mb-4 md:mb-6">
+          <div class="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/40 px-3 py-1 text-[11px] md:text-xs text-slate-300">
+            <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+            <span>Calculator</span>
+          </div>
+          <h1 class="text-xl md:text-3xl font-extrabold tracking-tight mt-2">MSTY Average Price Reducer</h1>
+          <p class="text-slate-300 mt-1 md:mt-2 text-sm md:text-base leading-relaxed">
             For <span class="font-semibold">MSTY</span> (YieldMax MSTR Option Income Strategy ETF). Enter your current position, target average, and buy price — we’ll calculate how many shares to buy.
           </p>
         </header>
 
         <!-- Live price (auto-used for P) -->
-        <section class="mb-6 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 md:p-5">
+        <section class="mb-4 md:mb-6 rounded-2xl border border-sky-500/30 bg-gradient-to-br from-sky-500/10 to-sky-400/5 p-3 md:p-4">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
-              <p class="text-slate-300 text-sm md:text-base">Live MSTY price</p>
+              <p class="text-slate-300 text-xs md:text-sm">Live MSTY price</p>
               <div class="flex items-end gap-2">
-                <p id="livePrice" class="text-3xl md:text-4xl font-extrabold tabular-nums">$—</p>
+                <p id="livePrice" class="text-2xl md:text-4xl font-extrabold tabular-nums">$—</p>
                 <span id="pStatus" class="text-[11px] md:text-xs px-2 py-0.5 rounded-md border border-slate-600 text-slate-300">waiting…</span>
               </div>
-              <p id="liveTime" class="text-[11px] md:text-xs text-slate-400 mt-1">Fetching…</p>
+              <p id="liveTime" class="text-[10px] md:text-xs text-slate-400 mt-1">Fetching…</p>
             </div>
             <div class="text-right text-[10px] md:text-xs text-slate-400">
               <p>Source: Stooq/Yahoo via CORS mirror (r.jina.ai).</p>
@@ -46,60 +64,72 @@
         
 
         <!-- Calculator form -->
-        <form id="calcForm" class="space-y-5" onsubmit="event.preventDefault(); calculate();">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form id="calcForm" class="space-y-4" onsubmit="event.preventDefault(); calculate();">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <!-- Shares -->
             <div>
               <label for="shares" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
                 Current shares S <span class="text-slate-400 text-xs">(required)</span>
               </label>
               <input id="shares" inputmode="decimal" placeholder="e.g., 1000"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                     class="w-full px-3.5 py-2.5 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/70 focus:border-sky-400/60"
                      aria-label="Current shares">
-              <p class="mt-1 text-xs text-slate-400">Your current position size. Fractional shares are OK.</p>
+              <p class="mt-1 text-[11px] text-slate-400">Your current position size. Fractional shares are OK.</p>
             </div>
 
             <!-- Cost basis -->
             <div>
               <label for="cost" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
-                Total cost basis C, $ <span class="text-slate-400 text-xs">(required or use Avg)</span>
+                Total cost basis C <span class="text-slate-400 text-xs">(required or use Avg)</span>
               </label>
-              <input id="cost" inputmode="decimal" placeholder="e.g., 25000.00"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                     aria-label="Current cost basis">
-              <p class="mt-1 text-xs text-slate-400">If you don’t know C, leave it empty and fill “Avg” — we’ll use C = S × Avg.</p>
+              <div class="relative">
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input id="cost" inputmode="decimal" placeholder="e.g., 25000.00"
+                       class="w-full pl-7 pr-3.5 py-2.5 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/70 focus:border-sky-400/60"
+                       aria-label="Current cost basis">
+              </div>
+              <p class="mt-1 text-[11px] text-slate-400">If you don’t know C, leave it empty and fill “Avg”.</p>
             </div>
 
             <!-- Avg (optional) -->
             <div>
               <label for="avg" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
-                Average price Avg, $ <span class="text-slate-400 text-xs">(optional)</span>
+                Average price Avg <span class="text-slate-400 text-xs">(optional)</span>
               </label>
-              <input id="avg" inputmode="decimal" placeholder="e.g., 23.35"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                     aria-label="Current average price">
-              <p class="mt-1 text-xs text-slate-400">Only used if C is empty.</p>
+              <div class="relative">
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input id="avg" inputmode="decimal" placeholder="e.g., 23.35"
+                       class="w-full pl-7 pr-3.5 py-2.5 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/70 focus:border-sky-400/60"
+                       aria-label="Current average price">
+              </div>
+              <p class="mt-1 text-[11px] text-slate-400">Only used if C is empty.</p>
             </div>
 
             <!-- Buy price -->
             <div>
               <label for="price" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
-                Buy price P, $ <span class="text-slate-400 text-xs">(required)</span>
+                Buy price P <span class="text-slate-400 text-xs">(required)</span>
               </label>
-              <input id="price" inputmode="decimal" placeholder="auto-filled from live price"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                     aria-label="Buy price">
-              <p class="mt-1 text-xs text-slate-400">Auto-filled from live MSTY price; you can override it.</p>
+              <div class="relative">
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input id="price" inputmode="decimal" placeholder="auto-filled from live price"
+                       class="w-full pl-7 pr-3.5 py-2.5 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/70 focus:border-sky-400/60"
+                       aria-label="Buy price">
+              </div>
+              <p class="mt-1 text-[11px] text-slate-400">Auto-filled from MSTY live price; you can override.</p>
             </div>
 
             <!-- Target -->
             <div>
               <label for="target" class="block text-slate-200 font-medium mb-1 text-sm md:text-base">
-                Target average T, $ <span class="text-slate-400 text-xs">(required)</span>
+                Target average T <span class="text-slate-400 text-xs">(required)</span>
               </label>
-              <input id="target" inputmode="decimal" placeholder="e.g., 23.00"
-                     class="w-full px-4 py-3 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                     aria-label="Target average">
+              <div class="relative">
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input id="target" inputmode="decimal" placeholder="e.g., 23.00"
+                       class="w-full pl-7 pr-3.5 py-2.5 text-sm md:text-base rounded-xl bg-slate-800/60 border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/70 focus:border-sky-400/60"
+                       aria-label="Target average">
+              </div>
             </div>
 
             <!-- Strict toggle -->
@@ -111,13 +141,13 @@
             </div>
           </div>
 
-          <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
+          <div class="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
             <button type="submit"
-                    class="w-full sm:w-auto px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-semibold text-sm md:text-base shadow-lg shadow-sky-600/20">
+                    class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-semibold text-sm md:text-base shadow-lg shadow-sky-600/20 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-sky-400/70">
               Calculate
             </button>
             <button type="button" onclick="resetForm();"
-                    class="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-slate-800 font-semibold text-sm md:text-base">
+                    class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 active:bg-slate-800 font-semibold text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-slate-400/50">
               Reset
             </button>
           </div>
@@ -128,24 +158,24 @@
 
         <!-- Result -->
         <section id="result" class="mt-5 hidden">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div class="rounded-xl border border-emerald-600/30 bg-gradient-to-br from-emerald-600/10 to-emerald-500/5 p-3 md:p-4">
               <p class="text-slate-300 text-sm md:text-base">Shares to buy</p>
               <p id="need" class="text-2xl md:text-3xl font-extrabold">—</p>
             </div>
-            <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
+            <div class="rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-indigo-400/5 p-3 md:p-4">
               <p class="text-slate-300 text-sm md:text-base">Additional spend</p>
               <p id="spend" class="text-2xl md:text-3xl font-extrabold">—</p>
             </div>
-            <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+            <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-3 md:p-4">
               <p class="text-slate-300 text-sm md:text-base">Final shares</p>
               <p id="finalShares" class="text-xl md:text-2xl font-bold">—</p>
             </div>
-            <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+            <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-3 md:p-4">
               <p class="text-slate-300 text-sm md:text-base">Final cost basis</p>
               <p id="finalCost" class="text-xl md:text-2xl font-bold">—</p>
             </div>
-            <div class="md:col-span-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <div class="md:col-span-2 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-amber-400/5 p-3 md:p-4">
               <p class="text-slate-300 text-sm md:text-base">New average price</p>
               <p id="newAvg" class="text-2xl md:text-3xl font-extrabold">—</p>
             </div>
@@ -154,9 +184,11 @@
         </section>
 
         <!-- Chart -->
-        <section id="chart-container" class="mt-5 hidden">
-          <h2 class="text-xl md:text-2xl font-bold text-center mb-4">MSTY Historical Price (30 days)</h2>
-          <canvas id="priceChart"></canvas>
+        <section id="chart-container" class="mt-4 md:mt-5 hidden">
+          <h2 class="text-lg md:text-2xl font-bold text-center mb-3 md:mb-4">MSTY Historical Price (30 days)</h2>
+          <div class="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3">
+            <canvas id="priceChart"></canvas>
+          </div>
           <div id="chartImageWrap" class="hidden">
             <img id="priceChartImg" alt="MSTY daily chart (fallback)" class="w-full rounded-xl border border-slate-700/60" />
             <p id="chartFallbackNote" class="mt-2 text-xs text-slate-400 text-center">Fallback chart (image) loaded due to data source issues.</p>
@@ -164,19 +196,24 @@
         </section>
 
         <!-- Quick Guide / FAQ -->
-        <section class="mt-6 rounded-2xl border border-slate-700/60 bg-slate-900/40 p-4 md:p-5">
-          <h2 class="text-lg md:text-xl font-bold mb-2">Quick Guide: How to fill the form</h2>
-          <ul class="list-disc pl-5 space-y-1 text-sm md:text-base text-slate-300">
-            <li><span class="font-semibold">S — Current shares:</span> total number of MSTY shares you already own. Fractional shares are OK.</li>
-            <li><span class="font-semibold">C — Total cost basis ($):</span> how much you’ve spent so far on this position. If unknown, leave it empty and use <span class="font-semibold">Avg</span>.</li>
-            <li><span class="font-semibold">Avg — Current average price ($):</span> only used when <span class="font-semibold">C</span> is empty; the calculator uses <span class="font-mono">C = S × Avg</span>.</li>
-            <li><span class="font-semibold">P — Buy price ($):</span> auto‑filled from the live quote; adjust if you plan a different price.</li>
-            <li><span class="font-semibold">T — Target average ($):</span> the new average price you want to reach after buying more shares.</li>
-            <li><span class="font-semibold">Strict &lt; T:</span> when checked, result guarantees the new average is strictly below <span class="font-semibold">T</span>; when unchecked, <span class="font-mono">≤ T</span> is allowed.</li>
-          </ul>
-          <p class="mt-3 text-xs md:text-sm text-slate-400">
-            Tip: If the result looks borderline due to rounding, the tool will suggest adding 1 extra share for safety.
-          </p>
+        <section class="mt-6 rounded-2xl border border-slate-700/60 bg-slate-900/40 p-3 md:p-4">
+          <button id="guideToggle" type="button" class="w-full flex items-center justify-between gap-3 px-2 py-2 rounded-lg hover:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-slate-400/50" aria-expanded="false" aria-controls="guide">
+            <span class="text-left text-base md:text-lg font-bold">Quick Guide</span>
+            <svg id="guideChevron" class="h-4 w-4 text-slate-300 transition-transform" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </button>
+          <div id="guide" class="hidden mt-2">
+            <ul class="list-disc pl-5 space-y-1 text-[13px] md:text-sm text-slate-300">
+              <li><span class="font-semibold">S — Current shares:</span> total MSTY shares you already own. Fractionals OK.</li>
+              <li><span class="font-semibold">C — Total cost basis ($):</span> how much you’ve spent. If unknown, leave empty and use <span class="font-semibold">Avg</span>.</li>
+              <li><span class="font-semibold">Avg — Current average ($):</span> used only when <span class="font-semibold">C</span> is empty; uses <span class="font-mono">C = S × Avg</span>.</li>
+              <li><span class="font-semibold">P — Buy price ($):</span> auto‑filled from live quote; adjust if planning different price.</li>
+              <li><span class="font-semibold">T — Target average ($):</span> average price you want after buying more shares.</li>
+              <li><span class="font-semibold">Strict &lt; T:</span> checked guarantees new average is strictly below <span class="font-semibold">T</span>; unchecked allows <span class="font-mono">≤ T</span>.</li>
+            </ul>
+            <p class="mt-2 text-[11px] md:text-xs text-slate-400">
+              Tip: If results look borderline due to rounding, add 1 extra share for safety.
+            </p>
+          </div>
         </section>
 
         <!-- Footer -->
@@ -204,6 +241,16 @@
     const fmtTime = (tsSec) => {
       try { return new Date(tsSec * 1000).toLocaleString(); } catch { return "—"; }
     };
+    async function fetchJSONWithTimeout(url, ms) {
+      const timeout = withTimeout(ms);
+      try {
+        const res = await fetch(url, { cache: "no-store", signal: timeout.signal });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
+      } finally {
+        timeout.clear();
+      }
+    }
     function showMsg(text, type = "info") {
       const box = $("msg");
       box.classList.remove(
@@ -352,6 +399,14 @@
       ];
 
       const sources = [
+        // Local API first (faster, avoids CORS)
+        async () => {
+          const data = await fetchJSONWithTimeout("/api/price?symbol=MSTY", 5000);
+          const price = Number(data && data.price);
+          const ts = Number(data && data.ts);
+          if (!isFinite(price)) throw new Error("Local price parse failed");
+          return { price, ts: isFinite(ts) ? ts : Math.floor(Date.now()/1000), labelText: "auto-filled (local API)", timeSuffix: " • Local" };
+        },
         // Stooq via mirror (https and http variants)
         ...stooqUrls.map(u => async () => {
           const csv = await fetchTextWithTimeout("https://r.jina.ai/" + u, 6000);
@@ -418,6 +473,12 @@
         "https://query2.finance.yahoo.com/v8/finance/chart/MSTY?range=1mo&interval=1d",
       ];
       const sources = [
+        // Local API first
+        async () => {
+          const data = await fetchJSONWithTimeout("/api/history?symbol=MSTY&range=30d", 6000);
+          if (!data || !Array.isArray(data.labels) || data.labels.length < 2) throw new Error("Local history empty");
+          return { labels: data.labels, prices: data.prices };
+        },
         ...stooqHistUrls.map(u => async () => parseStooqHistoricalCsv(await fetchTextWithTimeout("https://r.jina.ai/" + u, 7000))),
         ...yahooHistUrls.map(u => async () => parseYahooHistoricalJson(await fetchTextWithTimeout("https://r.jina.ai/" + u, 7000))),
       ];
@@ -550,6 +611,25 @@
     }
 
     fetchHistoricalData();
+
+    // ---------- Quick Guide toggle ----------
+    (function initGuideToggle() {
+      const btn = $("guideToggle");
+      const panel = $("guide");
+      const chevron = $("guideChevron");
+      if (!btn || !panel) return;
+      function setOpen(open) {
+        btn.setAttribute("aria-expanded", String(open));
+        panel.classList.toggle("hidden", !open);
+        if (chevron) chevron.style.transform = open ? "rotate(180deg)" : "rotate(0deg)";
+      }
+      // Default: collapsed on small screens, expanded on md+
+      const mq = window.matchMedia("(min-width: 768px)");
+      function applyMQ() { setOpen(mq.matches); }
+      applyMQ();
+      mq.addEventListener ? mq.addEventListener("change", applyMQ) : mq.addListener(applyMQ);
+      btn.addEventListener("click", () => setOpen(btn.getAttribute("aria-expanded") !== "true"));
+    })();
   </script>
 </body>
 </html>
